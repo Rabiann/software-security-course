@@ -1,0 +1,24 @@
+%% Шаблон DFD у нотації Mermaid. Замініть на елементи своєї системи.
+flowchart LR
+    user([Lecturer/Student/Administration]):::ext
+    smtp([SMTP]):::ext
+    subgraph TB1[Межа довіри: застосунок]
+        proxy[NGINX Reverse Proxy]
+        service[Service Layer]
+    end
+    subgraph TB2[Межа довіри: сховище]
+        db[(Relational-DB)]
+        docs[(Object-DB)]
+    end
+
+    user --> |HTTPS request, JWT|proxy
+    proxy --> service
+    service --> |SQL request|db
+    db --> |Data|service
+    service --> |Data request|docs
+    docs --> |.pdf, .docx, .xlsl|service
+    service --> |HTML mail|smtp
+    service --> |HTML page, .pdf, etc.|proxy
+    proxy --> user
+
+    classDef ext fill:#eee,stroke:#333;
