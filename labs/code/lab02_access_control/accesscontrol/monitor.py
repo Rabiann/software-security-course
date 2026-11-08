@@ -99,12 +99,53 @@ class AnomalyDetector:
 
     Здобувач реалізує детектори двох аномалій свого варіанта.
     """
+    THRESHOLD = 3
+
+    def _check_threshold(self, failures: int) -> bool:
+        return failures >= self.THRESHOLD
 
     def scan(self, log: AuditLog) -> list[str]:
         alerts: list[str] = []
         # TODO(варіант): реалізувати виявлення двох аномалій зі свого завдання,
         # наприклад «сплеск відмов у доступі від одного суб'єкта» або
         # «послідовний перебір ідентифікаторів об'єктів».
+
+        entries = log.entries()
+
+        current_user = None
+        failures = 0
+        user_actions: dict[str, set[Permission]] = dict()
+
+        for entry in entries:
+            actions = user_actions.get(entry['subject'])
+            if actions: 
+                if entry['action'] not in actions:
+                    alerts.append(f'Subject {entry['subject']} performs action {entry['action']} first time')
+                    actions.add(entry['action'])
+            else:
+                user_actions[entry['subject']] = {entry['action']}
+
+            if not entry['allowed']:
+                if current_user == entry['subject']:
+                    failures += 1
+                else:
+                    if self._check_threshold(failures):
+                        alerts.append(f'Subject {current_user} exceeded {self.THRESHOLD} failures')
+
+                    current_user = entry['subject']
+                    failures = 1
+
+            else:
+                if self._check_threshold(failures):
+                    alerts.append(f'Subject {current_user} exceeded {self.THRESHOLD} failures')
+
+                current_user = None
+                failures = 0
+
+        if self._check_threshold(failures):
+            alerts.append(f'Subject {current_user} exceeded {self.THRESHOLD} failures')
+
+
         return alerts
 
 
